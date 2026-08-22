@@ -1,0 +1,17 @@
+## Interface: 120100, 120007
+## Title: Chukie PartyGrid
+## Notes: Grilla de party clickeable standalone para Retail 12.1. Se integra en ElvUI si está presente.
+## Author: Chukie
+## Version: 0.4.0
+## OptionalDeps: Masque, ElvUI
+## SavedVariables: ChukiePartyGridDB
+## IconTexture: Interface\Icons\Spell_Holy_PrayerOfHealing
+## AddonCompartmentFunc: ChukiePartyGrid_OnAddonCompartmentClick
+## AddonCompartmentFuncOnEnter: ChukiePartyGrid_OnAddonCompartmentEnter
+## AddonCompartmentFuncOnLeave: ChukiePartyGrid_OnAddonCompartmentLeave
+
+Libs\LibStub\LibStub.lua
+Core.lua
+PartyGrid.lua
+ConfigPanel.lua
+ElvUIPlugin.lua

@@ -1,0 +1,16 @@
+# Copia de trabajo del addon general, usada solo como referencia al portar features.
+tmp/
+
+# Editores / SO
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Backups y salidas sueltas
+*.bak
+*.orig
+*.rej
+*.log

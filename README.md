@@ -9,6 +9,10 @@ Copiar la carpeta completa `Chukie_PartyGrid` a:
 
 `World of Warcraft\_retail_\Interface\AddOns\Chukie_PartyGrid`
 
+La carpeta tiene que llamarse exactamente igual que el `.toc` que hay dentro. Al bajar el ZIP
+de GitHub queda `Chukie_PartyGrid-main`, y con ese nombre el cliente ni siquiera lista el
+addon: hay que renombrarla a `Chukie_PartyGrid`. Con `git clone` el nombre ya sale correcto.
+
 Activar **Chukie PartyGrid** en el selector de addons y usar:
 
 - `/cpg` (alias `/partygrid`, `/chukie-partygrid`): abre/cierra la ventana propia.
@@ -80,6 +84,9 @@ cae al bloque encadenado: el problema es el frame objetivo, no el lado ni el cre
 - No usa ClickCast templates ni se registra en Clique.
 - Ninguna opción, atributo, tamaño o ancla segura se cambia en combate.
 - Cooldowns/cargas usan las APIs de duration objects y guards de valores secretos 12.x.
+- La geometría de marcos ajenos también se lee con esos guards: un marco marcado con
+  secretos (los resaltes de aura de ElvUI, cualquier barra de vida) devuelve medidas
+  ilegibles, así que se tratan como desconocidas y no se baja por esa rama del árbol.
 
 ## Columnas de ciclo
 
@@ -110,7 +117,7 @@ en Chukie UI o en este standalone.
 La excepción son las **acciones de ciclo**: `ch-cl-<Hechizo>` es el mismo nombre en los
 dos addons, a propósito, para que las macros ya escritas sigan funcionando al pasar de la
 versión integrada a esta. Justamente por eso no conviene tener las dos con ciclos activos
-al mismo tiempo: el segundo en cargar se queda con el botón.
+al mismo tiempo: el primero en cargar conserva la acción y el segundo avisa sin pisarla.
 
 Datos guardados: `ChukiePartyGridDB` (perfil único). Las columnas de ciclo crean globals
 `ch-cl-<Hechizo>`; si otro addon ya usa ese nombre, PartyGrid lo avisa y no lo pisa.

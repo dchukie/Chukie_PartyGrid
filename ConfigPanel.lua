@@ -207,7 +207,7 @@ local function addColumnCycleAction(layoutCategory, column)
     if not action then
       return "(activá ciclo y asigná un hechizo)"
     end
-    return "/click " .. action .. "  ·  " .. PG():CycleUnitSummary(column)
+    return "/click " .. action
   end
   local function set(value)
     if PG():SettingsLocked() or value == get() then
@@ -229,7 +229,7 @@ local function addColumnCycleAction(layoutCategory, column)
   Settings.CreateTextBox(
     layoutCategory,
     setting,
-    "Copiá esta línea a una macro. A la derecha se listan las unidades que hoy integran el ciclo."
+    "Copiá esta línea completa a una macro. Las celdas prendidas muestran las unidades incluidas."
   )
 end
 
@@ -303,6 +303,22 @@ local function registerPanel()
     addColumnSpell(category, column)
     addColumnCycle(category, column)
     addColumnCycleAction(category, column)
+    if CreateSettingsButtonInitializer then
+      local columnIndex = column
+      layout:AddInitializer(
+        CreateSettingsButtonInitializer(
+          "Columna " .. columnIndex,
+          "Limpiar",
+          function()
+            PG():SetColumnSpell(columnIndex, nil)
+          end,
+          "Borra el hechizo de esta columna fuera de combate.",
+          true,
+          nil,
+          nil
+        )
+      )
+    end
   end
 
   if CreateSettingsButtonInitializer then

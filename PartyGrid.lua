@@ -134,6 +134,51 @@ local function isSecret(v)
   return issecretvalue and issecretvalue(v) or false
 end
 
+--[[ Lectura de marcos ajenos. Desde 12.0 un marco al que el cliente u otro addon le pasó un
+     valor secreto queda marcado y sus getters devuelven secretos: compararlos desde código
+     con taint aborta la ejecución. Pasa con ElvUI, cuyos resaltes de aura cuelgan de los
+     marcos de unidad, así que el recorrido del árbol topaba con anchos secretos y reventaba.
+     Un dato ilegible se trata como desconocido: perder una referencia degrada el anclaje,
+     mientras que el error corta el layout entero. ]]
+local function frameNumber(frame, method)
+  local fn = frame and frame[method]
+  if type(fn) ~= "function" then
+    return nil
+  end
+  local ok, value = pcall(fn, frame)
+  if not ok or type(value) ~= "number" or isSecret(value) then
+    return nil
+  end
+  return value
+end
+
+local function frameFlag(frame, method)
+  local fn = frame and frame[method]
+  if type(fn) ~= "function" then
+    return false
+  end
+  local ok, value = pcall(fn, frame)
+  if not ok or isSecret(value) then
+    return false
+  end
+  return value == true
+end
+
+--- En mapas restringidos UnitIsUnit puede devolver un booleano secreto, que no se puede testear.
+local function sameUnit(a, b)
+  if a == b then
+    return true
+  end
+  if not UnitIsUnit then
+    return false
+  end
+  local ok, same = pcall(UnitIsUnit, a, b)
+  if not ok or isSecret(same) then
+    return false
+  end
+  return same == true
+end
+
 local function spellInfo(spellId)
   spellId = tonumber(spellId)
   if not spellId or spellId <= 0 then
@@ -995,7 +1040,7 @@ function PG:PrintDiagnostics()
   local host = self._host
   if host then
     print(string.format("  host=%s tam=%.0fx%.0f celdas=%d columnas=%d opacidad=%d%% pendiente=%s",
-      tag(host), host:GetWidth() or 0, host:GetHeight() or 0,
+      tag(host), frameNumber(host, "GetWidth") or 0, frameNumber(host, "GetHeight") or 0,
       #(self._buttons or {}), self:Columns(), math.floor((host:GetAlpha() or 1) * 100 + 0.5),
       tostring(self._pending == true)))
     print("  padre=" .. tag(host:GetParent()) .. " esperado=" .. frameName(self:BlizzardContainer()))
@@ -1363,8 +1408,8 @@ function PG:EnsureCycleButton(actionName)
   end
   --- Un global con ese nombre que no sea nuestro no se toca: sería pisar otro addon.
   local existing = _G[actionName]
-  if existing and not existing._chukiePartyCycle then
-    print("|cffff9900Chukie PartyGrid|r: la acción " .. actionName .. " ya existe y no pertenece a PartyGrid.")
+  if existing then
+    print("|cffff9900Chukie PartyGrid|r: la acción " .. actionName .. " ya fue publicada por otro addon.")
     return nil
   end
   local ok
@@ -1373,6 +1418,7 @@ function PG:EnsureCycleButton(actionName)
     return nil
   end
   button._chukiePartyCycle = true
+  button._chukiePartyCycleOwner = "Chukie_PartyGrid"
   button:SetSize(1, 1)
   button:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 0, -10)
   button:SetAlpha(0)
@@ -1505,7 +1551,7 @@ function PG:EnsureFrames()
     f:StopMovingOrSizing()
     local cx, cy = f:GetCenter()
     local px, py = UIParent:GetCenter()
-    if cx and px then
+    if cx and cy and px and py and not (isSecret(cx) or isSecret(cy) or isSecret(px) or isSecret(py)) then
       -- Arrastrar implica posición propia: si seguía pegada a Blizzard, se suelta.
       PG:SetOptions({
         attachToBlizzard = false,
@@ -1582,11 +1628,12 @@ local function frameUsable(frame)
 end
 
 local function frameVisible(frame)
-  return frameUsable(frame)
-    and frame.IsVisible
-    and frame:IsVisible()
-    and frame.GetWidth
-    and (frame:GetWidth() or 0) > 1
+  if not frameUsable(frame) or not frameFlag(frame, "IsVisible") then
+    return false
+  end
+  local width = frameNumber(frame, "GetWidth")
+  --- Ancho ilegible (marco con secretos): alcanza con que esté visible.
+  return width == nil or width > 1
 end
 
 local function candidateFrame(names, allowHidden)
@@ -1712,21 +1759,29 @@ function PG:BlizzardUnitFrames(container)
            este filtro el mapa puede devolver una celda nuestra como marco de la unidad, y
            anclarla a sí misma aborta el layout ("Cannot anchor to itself"). Pasa justo
            fuera de grupo: los marcos de Blizzard no se dibujan y los nuestros sí. ]]
-      if not child._chukieGrid then
+      if not isSecret(child) and not child._chukieGrid then
         local unit = type(child.unit) == "string" and child.unit or nil
         if not unit and child.GetAttribute then
           local ok, attr = pcall(child.GetAttribute, child, "unit")
           unit = ok and type(attr) == "string" and attr or nil
         end
-        if unit and child:IsVisible() and (child:GetWidth() or 0) > 1 then
-          for _, ours in ipairs(UNITS) do
-            if not map[ours] and (unit == ours or UnitIsUnit(unit, ours) == true) then
-              map[ours] = child
-              break
+        if unit and frameFlag(child, "IsVisible") then
+          local width = frameNumber(child, "GetWidth")
+          if width == nil or width > 1 then
+            for _, ours in ipairs(UNITS) do
+              if not map[ours] and sameUnit(unit, ours) then
+                map[ours] = child
+                break
+              end
             end
           end
         end
-        scan(child, depth + 1)
+        --[[ Un marco marcado con secretos devuelve medidas e hijos ilegibles, así que no se
+             baja por su rama: los resaltes de aura de ElvUI son de ese tipo y no contienen
+             marcos de unidad, con lo que el mapa no pierde nada. ]]
+        if not frameFlag(child, "HasSecretValues") then
+          scan(child, depth + 1)
+        end
       end
     end
   end
@@ -1804,8 +1859,10 @@ function PG:Layout()
     local key = {}
     for i, unit in ipairs(order) do
       local ref = rows[unit]
-      if ref then
-        key[unit] = -math.floor((ref:GetTop() or 0) * 10) * 10000 + math.floor((ref:GetLeft() or 0) * 10)
+      local top = ref and frameNumber(ref, "GetTop")
+      local left = ref and frameNumber(ref, "GetLeft")
+      if top and left then
+        key[unit] = -math.floor(top * 10) * 10000 + math.floor(left * 10)
       else
         key[unit] = 1e12 + i
       end
@@ -2225,8 +2282,8 @@ function PG:EnsureConfig()
   local f = CreateFrame("Frame", "ChukiePartyGrid_Config", UIParent, "BackdropTemplate")
   --- La ventana no puede ser más alta que la pantalla: el contenido va en un scroll, así
   --- que en una resolución baja se recorta la caja y no los controles del final.
-  f:SetSize(540, math.min(860, math.floor((UIParent:GetHeight() or 800) * 0.92)))
-  f:SetPoint("CENTER", UIParent, "CENTER", ((UIParent:GetWidth() or 1024) / 4), 0)
+  f:SetSize(540, math.min(860, math.floor((frameNumber(UIParent, "GetHeight") or 800) * 0.92)))
+  f:SetPoint("CENTER", UIParent, "CENTER", ((frameNumber(UIParent, "GetWidth") or 1024) / 4), 0)
   f:SetFrameStrata("DIALOG")
   f:SetFrameLevel(200)
   f:SetMovable(true)
@@ -2610,9 +2667,9 @@ function PG:SyncConfig()
     f.hostStatus:SetText(string.format(
       "|cff66ff66Resuelto:|r %s · visible=%s · %.0fx%.0f · unidades=%d",
       resolvedName,
-      tostring(resolved.IsVisible and resolved:IsVisible()),
-      resolved:GetWidth() or 0,
-      resolved:GetHeight() or 0,
+      tostring(frameFlag(resolved, "IsVisible")),
+      frameNumber(resolved, "GetWidth") or 0,
+      frameNumber(resolved, "GetHeight") or 0,
       mappedCount
     ))
   elseif db.attachToBlizzard ~= false then

@@ -361,7 +361,7 @@ local function buildOptions(ACH)
         if not action then
           return ""
         end
-        return "/click " .. action .. "  ·  " .. PG():CycleUnitSummary(index)
+        return "/click " .. action
       end,
       function()
         print("|cffff9900Chukie PartyGrid|r: copiá esa línea a una macro; la lista se edita con clic derecho en la grilla.")

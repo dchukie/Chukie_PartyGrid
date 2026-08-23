@@ -12,6 +12,9 @@ el mismo núcleo operativo, pero no es una copia literal.
 - Escaneo profundo por `unit` y `perUnitAnchor` en los cuatro lados
 - Guardas de valores secretos 12.x, tanto en hechizos como en geometría de marcos ajenos
   (`frameNumber`, `frameFlag`, `sameUnit`): sin ellas ElvUI rompe el recorrido del árbol
+- Tolerancia a objetos prohibidos en ese recorrido (`frameChildren` + un `pcall` por hijo):
+  con ElvUI hay ramas reservadas al cliente y tocarlas aborta la ejecución. El árbol se
+  recorre rama por rama, descartando la ilegible en vez de perder el mapa entero
 - Toda API opcional del panel de Settings va detrás de un `if`. `Settings.CreateTextBox` no
   existe: llamarla aborta el registro y el addon se queda sin panel de opciones
 - Ventana desplazable con edición, macro copiable y estado del ciclo

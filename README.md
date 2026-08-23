@@ -95,6 +95,12 @@ cae al bloque encadenado: el problema es el frame objetivo, no el lado ni el cre
 - La geometría de marcos ajenos también se lee con esos guards: un marco marcado con
   secretos (los resaltes de aura de ElvUI, cualquier barra de vida) devuelve medidas
   ilegibles, así que se tratan como desconocidas y no se baja por esa rama del árbol.
+- El recorrido del árbol de party tolera **objetos prohibidos** (0.4.4): con ElvUI aparecen
+  ramas que el cliente se reserva, y pedir sus hijos o leer un campo desde el addon aborta la
+  ejecución («Attempt to access forbidden object from code tainted by an AddOn»). Antes ese
+  error se repetía en cada evento y el corte por fallos apagaba la grilla en la sesión; ahora
+  se descarta solo la rama ilegible. Si igual quedó apagada: `/cpg on` la reintenta sin salir
+  del juego y `/cpg diag` muestra el último error.
 
 ## Columnas de ciclo
 

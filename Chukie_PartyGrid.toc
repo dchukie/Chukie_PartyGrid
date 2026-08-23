@@ -2,7 +2,7 @@
 ## Title: Chukie PartyGrid
 ## Notes: Grilla de party clickeable standalone para Retail 12.1. Se integra en ElvUI si está presente.
 ## Author: Chukie
-## Version: 0.4.3
+## Version: 0.4.4
 ## OptionalDeps: Masque, ElvUI
 ## SavedVariables: ChukiePartyGridDB
 ## IconTexture: Interface\Icons\Spell_Holy_PrayerOfHealing

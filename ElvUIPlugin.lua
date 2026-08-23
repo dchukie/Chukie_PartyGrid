@@ -280,9 +280,18 @@ local function buildOptions(ACH)
     nil,
     detached
   )
-  anchor.args.gap = ACH:Range("Distancia al frame", nil, 7, rangeValues("gap", 2, -60, 300), nil, nil, nil, detached)
-  anchor.args.offsetX = ACH:Range("Ajuste X", nil, 8, rangeValues("offset", 2, -400, 400))
-  anchor.args.offsetY = ACH:Range("Ajuste Y", nil, 9, rangeValues("offset", 2, -400, 400))
+  anchor.args.gap = ACH:Range(
+    "Distancia al frame",
+    "Separación respecto al frame de ElvUI. En negativo la grilla se mete por encima del marco.",
+    7,
+    rangeValues("gap", 2, -600, 600),
+    nil,
+    nil,
+    nil,
+    detached
+  )
+  anchor.args.offsetX = ACH:Range("Ajuste X", nil, 8, rangeValues("offset", 2, -600, 600))
+  anchor.args.offsetY = ACH:Range("Ajuste Y", nil, 9, rangeValues("offset", 2, -600, 600))
   anchor.args.showSolo = ACH:Toggle("Mostrar en solitario", "Sólo tiene efecto en modo libre.", 10, nil, nil, nil, nil, nil, function()
     return not detached()
   end)

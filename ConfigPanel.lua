@@ -17,6 +17,26 @@ local function register(setting, getter)
   return setting
 end
 
+--[[ El panel de Settings no tiene control de texto: la API solo publica checkbox, slider y
+     dropdown, y `Settings.CreateTextBox` nunca existió. Llamarla abortaba el registro entero
+     del panel, con lo que se perdían todas las opciones y no solo la caja. Se comprueba antes
+     de usarla y, donde hace falta escribir, se ofrece la ventana /cpg, que sí tiene la caja
+     (igual que el panel de ElvUI). ]]
+local function textBoxSupported()
+  return Settings ~= nil and type(Settings.CreateTextBox) == "function"
+end
+
+local function addWindowShortcut(layout, label, description)
+  if not CreateSettingsButtonInitializer then
+    return
+  end
+  layout:AddInitializer(
+    CreateSettingsButtonInitializer(label, "Abrir /cpg", function()
+      PG():ShowConfig()
+    end, description, true)
+  )
+end
+
 local function addBool(layoutCategory, uniqueId, key, label, tooltip, defaultOn, enabledSetter)
   local function get()
     local value = db()[key]
@@ -114,6 +134,9 @@ local function addList(layoutCategory, uniqueId, key, label, tooltip, values, la
 end
 
 local function addText(layoutCategory, uniqueId, key, label, tooltip, defaultValue)
+  if not textBoxSupported() then
+    return false
+  end
   local function get()
     return tostring(db()[key] or defaultValue or "")
   end
@@ -134,9 +157,13 @@ local function addText(layoutCategory, uniqueId, key, label, tooltip, defaultVal
   )
   register(setting, get)
   Settings.CreateTextBox(layoutCategory, setting, tooltip)
+  return true
 end
 
 local function addColumnSpell(layoutCategory, column)
+  if not textBoxSupported() then
+    return
+  end
   local function get()
     local spellId = PG():ColumnSpell(column)
     if not spellId then
@@ -202,6 +229,9 @@ end
 --- Solo lectura: la línea existe para copiarla a una macro. La lista de unidades no se
 --- edita acá porque se arma con clic derecho sobre la propia grilla.
 local function addColumnCycleAction(layoutCategory, column)
+  if not textBoxSupported() then
+    return
+  end
   local function get()
     local action = PG():CycleActionName(column)
     if not action then
@@ -276,7 +306,7 @@ local function registerPanel()
     PG().HOST_FRAME_LABELS,
     "auto"
   )
-  addText(
+  local hostCustomBox = addText(
     category,
     "ChukiePartyGrid_HostCustom",
     "hostFrameCustom",
@@ -284,6 +314,14 @@ local function registerPanel()
     "Ejemplo: ElvUF_Party. Sólo se usa con «Nombre global personalizado».",
     ""
   )
+  if not hostCustomBox then
+    addWindowShortcut(
+      layout,
+      "Nombre global personalizado",
+      "El panel de Settings no admite cajas de texto, así que el nombre del frame (por ejemplo"
+        .. " ElvUF_Party) se escribe en la ventana propia, que también muestra el frame resuelto."
+    )
+  end
   addBool(
     category,
     "ChukiePartyGrid_PerUnitAnchor",
@@ -293,12 +331,21 @@ local function registerPanel()
     true
   )
   addList(category, "ChukiePartyGrid_Side", "side", "Lado", "Lado del marco de cada jugador donde se colocan las celdas.", PG().SIDES, PG().SIDE_LABELS, "RIGHT")
-  addNumber(category, "ChukiePartyGrid_Gap", "gap", "Distancia al frame", "Separación respecto al frame.", -60, 300, 2, 8)
-  addNumber(category, "ChukiePartyGrid_OffsetX", "offsetX", "Offset X", "Ajuste horizontal.", -400, 400, 2, 0)
-  addNumber(category, "ChukiePartyGrid_OffsetY", "offsetY", "Offset Y", "Ajuste vertical.", -400, 400, 2, 0)
+  addNumber(category, "ChukiePartyGrid_Gap", "gap", "Distancia al frame", "Separación respecto al frame. Negativa la mete por encima del marco.", -600, 600, 2, 8)
+  addNumber(category, "ChukiePartyGrid_OffsetX", "offsetX", "Offset X", "Ajuste horizontal.", -600, 600, 2, 0)
+  addNumber(category, "ChukiePartyGrid_OffsetY", "offsetY", "Offset Y", "Ajuste vertical.", -600, 600, 2, 0)
   addBool(category, "ChukiePartyGrid_ShowSolo", "showSolo", "Mostrar en solitario", "Sólo tiene efecto en modo libre.", false)
 
   layout:AddInitializer(CreateSettingsListSectionHeaderInitializer("Habilidades por columna"))
+  if not textBoxSupported() then
+    addWindowShortcut(
+      layout,
+      "Hechizo y macro de cada columna",
+      "El panel de Settings no admite cajas de texto: el hechizo y la línea /click de cada"
+        .. " columna se ven y se editan en la ventana propia, o arrastrando el hechizo del libro"
+        .. " sobre una celda. Acá quedan el interruptor de ciclo y el botón Limpiar."
+    )
+  end
   for column = 1, 8 do
     addColumnSpell(category, column)
     addColumnCycle(category, column)
@@ -343,7 +390,15 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:SetScript("OnEvent", function(_, _, addon)
-  if addon == ADDON_NAME then
-    registerPanel()
+  if addon ~= ADDON_NAME then
+    return
+  end
+  --[[ Si algo del armado falla a mitad de camino, la categoría queda creada pero nunca se
+       registra y el panel desaparece entero sin explicación (fue lo que pasó al llamar a una
+       API de texto inexistente). Se aísla el error y se deja /cpg como camino válido. ]]
+  local ok, err = pcall(registerPanel)
+  if not ok then
+    category = nil
+    print("|cffff9900Chukie PartyGrid|r: no se pudo armar el panel de Opciones (" .. tostring(err) .. "). Usá /cpg.")
   end
 end)

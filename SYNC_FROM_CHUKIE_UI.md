@@ -12,6 +12,8 @@ el mismo núcleo operativo, pero no es una copia literal.
 - Escaneo profundo por `unit` y `perUnitAnchor` en los cuatro lados
 - Guardas de valores secretos 12.x, tanto en hechizos como en geometría de marcos ajenos
   (`frameNumber`, `frameFlag`, `sameUnit`): sin ellas ElvUI rompe el recorrido del árbol
+- Toda API opcional del panel de Settings va detrás de un `if`. `Settings.CreateTextBox` no
+  existe: llamarla aborta el registro y el addon se queda sin panel de opciones
 - Ventana desplazable con edición, macro copiable y estado del ciclo
 - Drag & drop, diagnósticos y aislamiento de errores
 

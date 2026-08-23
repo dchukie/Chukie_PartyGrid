@@ -50,6 +50,11 @@ En la ventana `/cpg` y en Opciones se puede elegir:
 - **Nombre global personalizado**: escribe un global como `ElvUF_Party`.
 - **Modo libre**: desmarca «Pegada a un frame» y usa «Mover».
 
+**Distancia al frame** y los **ajustes X/Y** llegan hasta ±600 px, así que la grilla puede
+alejarse media pantalla del marco de ElvUI o, en negativo, quedar por encima de él. En la
+ventana `/cpg` los sliders también responden a la rueda del mouse, que mueve de a un paso
+cuando el arrastre queda demasiado grueso para el rango.
+
 Los modos explícitos no caen silenciosamente en otro frame. Si el objetivo no existe
 todavía, la grilla queda oculta y el estado indica «Esperando frame». El watchdog vuelve
 a resolverlo cuando el addon/frame aparece.
@@ -78,8 +83,11 @@ cae al bloque encadenado: el problema es el frame objetivo, no el lado ni el cre
 
 - Arrastrar un hechizo del libro sobre una celda lo asigna a toda esa columna.
 - Arrastrar una celda hacia otra columna mueve la asignación.
-- En `/cpg` y en Opciones cada columna tiene una caja de texto: escribí el **nombre exacto
-  o el ID** del hechizo. Vacío limpia la columna.
+- En `/cpg` cada columna tiene una caja de texto: escribí el **nombre exacto o el ID** del
+  hechizo. Vacío limpia la columna. El panel de ElvUI tiene la misma caja.
+- En **Opciones → AddOns** no hay cajas de texto, y no es una omisión: la API de Settings de
+  Blizzard solo publica checkbox, slider y dropdown. Ahí quedan el interruptor de ciclo y el
+  botón **Limpiar** de cada columna, más un botón que abre `/cpg` para lo que hay que escribir.
 - Clic izquierdo castea al soltar (`useOnKeyDown=false`).
 - No usa ClickCast templates ni se registra en Clique.
 - Ninguna opción, atributo, tamaño o ancla segura se cambia en combate.
